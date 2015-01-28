@@ -1,3 +1,5 @@
 cache/
 develop_server.sh
 *.pyc
+Makefile
+__pycache__/
