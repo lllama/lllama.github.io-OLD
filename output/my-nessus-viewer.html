@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>My Nessus Viewer</title>
+        <link rel="stylesheet" href="http://stupentest.net/theme/css/main.css" />
+        <link href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Stupentest Atom Feed" />
+
+        <!--[if IE]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="http://stupentest.net/">Stupentest </a></h1>
+                <nav><ul>
+                    <li class="active"><a href="http://stupentest.net/category/blog.html">blog</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="http://stupentest.net/my-nessus-viewer.html" rel="bookmark"
+           title="Permalink to My Nessus Viewer">My Nessus Viewer</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2013-05-17T00:00:00+02:00">
+                Published: Fri 17 May 2013
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="http://stupentest.net/author/felix-ingram.html">Felix Ingram</a>
+        </address>
+<p>In <a href="http://stupentest.net/category/blog.html">blog</a>. </p>
+
+</footer><!-- /.post-info -->      <hr />
+<h1>My Nessus Viewer</h1>
+<p>I say <em>my</em> Nessus viewer because Nessus parsing scripts are one of the rites
+of passage for any pentester.</p>
+<p>If you've been using Nessus for long enough then you'll remember the <code>NBE</code>
+format. <code>NBE</code> was a lovely little pipe delimited format that I never had the
+misfortune to work with. I started out hating the HTML format and working with
+the first version of the XML output. Version one of the XML format was the
+worst kind of XML - closer to HTML than something useful. A lot more human
+readable than machine readable, and machine readable is what you wanted.</p>
+<p>The reason you wanted a machine readable format is because of Nessus's dirty
+little secret: it's not for pentesters. The secret begins to reveal itself the
+more you actually use Nessus. Pentesters do not need global profiles; we want
+per-project profiles. We do not need all our reports stored in one place; we
+want them separate and stored along with all of our other output from the test.
+And in the vast, vast, majority of cases, we do not want things reported
+host by host. Most pentest reports will list the things found and the hosts
+that are affected by the thing.</p>
+<p>That final point is why you want machine readable formats. And it's also why
+all pentesters must, at some point, write a Nessus parsing script. This one is
+mine.</p>
+<p>It represents my first attempt at GUI programming; it's a little simple but it
+does two things: shows your results by issue, rather than by host, and merges
+multiple reports into one.</p>
+<p>If you have any differences in the output then these will be shown in a "Diffs"
+tab. It's an ugly format but gets the job done.</p>
+<p>There are also a couple of output formats as well: reStructured Text, CSV and
+XML. The XML format is used internally, so is not that useful for others.</p>
+<p>Here's what you get when you run it:</p>
+<p><img alt="Nothing to see here" src="/images/nessusviewer_nothing_loaded.PNG" title="Nothing loaded yet" /></p>
+<p>Here's what you get when you load up a Nessus file:</p>
+<p><img alt="Metasploitable scan" src="/images/nessusviewer_Metasploitable_scan.PNG" title="Metasploitable has some issues" /></p>
+<p>If I load up the same scan again and hit the "merge" button the results get
+combined:</p>
+<p><img alt="Metasploitable scan" src="/images/nessusviewer_Metasploitable_scan_merged.PNG" title="Metasploitable has some issues. Again." /></p>
+<p>It is not code that I'm super happy with but I works well enough and others
+have found it useful, so check it out <a href="http://github.com/nccgroup/lapith">on
+Github</a>.</p>
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+                <div class="social">
+                        <h2>social</h2>
+                        <ul>
+                            <li><a href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
+
+                            <li><a href="https://twitter.com/lllamaboy">Twitter</a></li>
+                            <li><a href="https://github.com/lllama">Github</a></li>
+                        </ul>
+                </div><!-- /.social -->
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+
+                <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>

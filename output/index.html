@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>Stupentest</title>
+        <link rel="stylesheet" href="http://stupentest.net/theme/css/main.css" />
+        <link href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Stupentest Atom Feed" />
+
+        <!--[if IE]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="http://stupentest.net/">Stupentest </a></h1>
+                <nav><ul>
+                    <li><a href="http://stupentest.net/category/blog.html">blog</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+
+            <aside id="featured" class="body">
+                <article>
+                    <h1 class="entry-title"><a href="http://stupentest.net/detecting-sslstrip-using-css.html">Detecting SSLStrip using CSS</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2013-06-27T00:00:00+02:00">
+                Published: Thu 27 June 2013
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="http://stupentest.net/author/felix-ingram.html">Felix Ingram</a>
+        </address>
+<p>In <a href="http://stupentest.net/category/blog.html">blog</a>. </p>
+
+</footer><!-- /.post-info --><hr />
+<h1>Detecting SSLStrip using CSS</h1>
+<p>SSLStrip is a simple proxying tool that will change HTTPS links to vanilla
+HTTP. It's one of the reasons why pentest reports will recommend against
+promoting a user's session from unencrypted to encrypted channels when they
+access a sensitive section of a site. If an attacker is able to position
+themselves between the user and the site and alter traffic, then they can
+change all of the server's responses to remove any links to HTTPS URLs, before
+the session is moved to the secure channel.</p>
+<p>The problem is made worse by the user not being able to detect that the
+modifications are being performed. If they don't know that the site is supposed
+to be running over a secure connection then they won't know to check the links
+that they are clicking.</p>
+<p>One way to inform the user that something is amiss is to make use of some of
+the newer CSS selectors. The following example will be concerned with forms
+that get submitted to HTTPS URLs - something that is normally seen on login
+pages.</p>
+<div class="highlight"><pre><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">&quot;POST&quot;</span> <span class="na">action=</span><span class="s">&quot;https://mysite/login.php&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;label&gt;</span>Username<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">name=</span><span class="s">&quot;username&quot;</span> <span class="nt">/&gt;</span>
+    <span class="nt">&lt;label&gt;</span>Password<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;password&quot;</span> <span class="na">name=</span><span class="s">&quot;password&quot;</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+</pre></div>
+
+
+<p>Here we see that the site will submit the form to the URL
+'https://mysite/login.php'. If we have a look at the code for SSLStrip
+(<a href="https://github.com/moxie0/sslstrip/blob/master/sslstrip/ServerConnection.py#L31">see here</a>)
+then we see that that regular expression used to find secure links is fairly
+basic. Anything starting with "https" and then followed by some valid URL
+characters has the "https" replaced with "http"
+(<a href="https://github.com/moxie0/sslstrip/blob/master/sslstrip/ServerConnection.py#L144]">as shown here</a>).</p>
+<p>In our example this will result in our form looking like the following:</p>
+<div class="highlight"><pre><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">&quot;POST&quot;</span> <span class="na">action=</span><span class="s">&quot;http://mysite/login.php&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;label&gt;</span>Username<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">name=</span><span class="s">&quot;username&quot;</span> <span class="nt">/&gt;</span>
+    <span class="nt">&lt;label&gt;</span>Password<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;password&quot;</span> <span class="na">name=</span><span class="s">&quot;password&quot;</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+</pre></div>
+
+
+<p>And the user being none the wiser.</p>
+<p>In order to detect this change with CSS we need to use attribute value
+selectors. The following CSS rule:</p>
+<div class="highlight"><pre><span class="nt">form</span><span class="nc">.secure</span><span class="cp">[</span><span class="nx">action</span><span class="p">^</span><span class="o">=</span><span class="s2">&quot;http://&quot;</span><span class="cp">]</span><span class="nd">:after</span> <span class="p">{</span>
+    <span class="k">content</span><span class="o">:</span> <span class="sx">url(&quot;/images/nedry.gif&quot;)</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>Will change the following form:</p>
+<form class="secure" method="POST" action="https://#">
+    <label for="username1">Username</label>
+    <input type="text" name="username1" id="username1" /><br/>
+    <label for="password1">Password</label>
+    <input type="password" name="password1" id="password1" />
+</form>
+
+<p>To look like the following:</p>
+<form class="secure" method="POST" action="http://#">
+    <label for="username2">Username</label>
+    <input type="text" name="username2" id="username2" /><br/>
+    <label for="password2">Password</label>
+    <input type="password" name="password2" id="password2" /><br/>
+</form>
+
+<p>Not the most subtle of indicators, but should get the point across.</p>
+<p>The selector <code>form.secure[action^="http://"]:after</code> will match all forms that
+have the class of 'secure' and who's action begins with "http://". (The <code>:after</code>
+is used to insert content after the form). Site owners would have to add the
+class on all forms that they wanted to be secure and include some appropriate
+styling and content to warn users that their traffic is being intercepted.</p>
+<p>Obviously, this technique will only work when 'traditional' forms are being
+used. When JavaScript is being used for validation or other such trickery, and
+the form's action is changed as a result, then this method would not work as
+well. Including HTTPS links and overriding submission actions could still be
+used to make this technique valid, but that is left as an exercise to the
+reader.</p>                </article>
+            </aside><!-- /#featured -->
+                <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+
+            <li><article class="hentry">
+                <header>
+                    <h1><a href="http://stupentest.net/my-nessus-viewer.html" rel="bookmark"
+                           title="Permalink to My Nessus Viewer">My Nessus Viewer</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2013-05-17T00:00:00+02:00">
+                Published: Fri 17 May 2013
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="http://stupentest.net/author/felix-ingram.html">Felix Ingram</a>
+        </address>
+<p>In <a href="http://stupentest.net/category/blog.html">blog</a>. </p>
+
+</footer><!-- /.post-info -->                <hr />
+<h1>My Nessus Viewer</h1>
+<p>I say <em>my</em> Nessus viewer because Nessus parsing scripts are one of the rites
+of passage for any pentester.</p>
+<p>If you've been using Nessus for long enough then you'll remember the <code>NBE</code>
+format. <code>NBE</code> was a lovely little pipe delimited format that I never had ...</p>
+                <a class="readmore" href="http://stupentest.net/my-nessus-viewer.html">read more</a>
+                </div><!-- /.entry-content -->
+            </article></li>
+                </ol><!-- /#posts-list -->
+                </section><!-- /#content -->
+        <section id="extras" class="body">
+                <div class="social">
+                        <h2>social</h2>
+                        <ul>
+                            <li><a href="http://stupentest.net/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
+
+                            <li><a href="https://twitter.com/lllamaboy">Twitter</a></li>
+                            <li><a href="https://github.com/lllama">Github</a></li>
+                        </ul>
+                </div><!-- /.social -->
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+
+                <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>
