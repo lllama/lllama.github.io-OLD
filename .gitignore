@@ -1,2 +1,3 @@
-
+cache/
+develop_server.sh
 *.pyc
