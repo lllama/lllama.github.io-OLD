@@ -69,5 +69,6 @@ def publish():
     local('git commit -m "Publishing on '+str(datetime.now())+'"')
     local('git checkout master')
     local('git read-tree -m -u source:output')
+    local('git commit -m "Merge in output"')
     local('git push -u origin --all')
     local('git checkout source')
