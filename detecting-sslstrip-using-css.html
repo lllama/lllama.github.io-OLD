@@ -77,6 +77,12 @@ selectors. The following CSS rule:</p>
 </pre></div>
 
 
+<style>
+    form.secure[action^="http://"]:after {
+        content: url("/images/nedry.gif");
+    }
+</style>
+
 <p>Will change the following form:</p>
 <form class="secure" method="POST" action="https://#">
     <label for="username1">Username</label>

@@ -122,6 +122,12 @@ selectors. The following CSS rule:&lt;/p&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;style&gt;
+    form.secure[action^="http://"]:after {
+        content: url("/images/nedry.gif");
+    }
+&lt;/style&gt;
+
 &lt;p&gt;Will change the following form:&lt;/p&gt;
 &lt;form class="secure" method="POST" action="https://#"&gt;
     &lt;label for="username1"&gt;Username&lt;/label&gt;
