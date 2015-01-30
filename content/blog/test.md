@@ -1,4 +1,3 @@
-
 Title: TEST Detecting SSLStrip using CSS
 Date: 2013-07-27
 kind: article
