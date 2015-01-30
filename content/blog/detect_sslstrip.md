@@ -57,12 +57,6 @@ selectors. The following CSS rule:
         content: url("/images/nedry.gif");
     }
 
-<style type="text/css" scoped>
-    form.secure[action^="http://"]:after {
-        content: url("/images/nedry.gif");
-    }
-</style>
-
 Will change the following form:
 
 <form class="secure" method="POST" action="https://#">
@@ -75,6 +69,11 @@ Will change the following form:
 To look like the following:
 
 <form class="secure" method="POST" action="http://#">
+    <style type="text/css" scoped>
+        form.secure[action^="http://"]:after {
+            content: url("/images/nedry.gif");
+        }
+    </style>
     <label for="username2">Username</label>
     <input type="text" name="username2" id="username2" /><br/>
     <label for="password2">Password</label>
