@@ -57,6 +57,12 @@ selectors. The following CSS rule:
         content: url("/images/nedry.gif");
     }
 
+<style>
+    form.secure[action^="http://"]:after {
+        content: url("/images/nedry.gif");
+    }
+</style>
+
 Will change the following form:
 
 <form class="secure" method="POST" action="https://#">
