@@ -1,5 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Stupentest</title><link href="http://stupentest.net/" rel="alternate"></link><link href="http://stupentest.net/feeds/blog.atom.xml" rel="self"></link><id>http://stupentest.net/</id><updated>2013-06-27T00:00:00+02:00</updated><entry><title>Detecting SSLStrip using CSS</title><link href="http://stupentest.net/detecting-sslstrip-using-css.html" rel="alternate"></link><updated>2013-06-27T00:00:00+02:00</updated><author><name>Felix Ingram</name></author><id>tag:stupentest.net,2013-06-27:detecting-sslstrip-using-css.html</id><summary type="html">&lt;hr /&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Stupentest</title><link href="http://stupentest.net/" rel="alternate"></link><link href="http://stupentest.net/feeds/blog.atom.xml" rel="self"></link><id>http://stupentest.net/</id><updated>2013-07-27T00:00:00+02:00</updated><entry><title>TEST Detecting SSLStrip using CSS</title><link href="http://stupentest.net/test-detecting-sslstrip-using-css.html" rel="alternate"></link><updated>2013-07-27T00:00:00+02:00</updated><author><name>Felix Ingram</name></author><id>tag:stupentest.net,2013-07-27:test-detecting-sslstrip-using-css.html</id><summary type="html">&lt;hr /&gt;
+&lt;h1&gt;Detecting SSLStrip using CSS&lt;/h1&gt;
+&lt;p&gt;SSLStrip is a simple proxying tool that will change HTTPS links to vanilla
+HTTP. It's one of the reasons why pentest reports will recommend against
+promoting a user's session from unencrypted to encrypted channels when they
+access a sensitive section of a site. If an attacker is able to position
+themselves between the user and the site and alter traffic, then they can
+change all of the server's responses to remove any links to HTTPS URLs, before
+the session is moved to the secure channel.&lt;/p&gt;
+&lt;p&gt;The problem is made worse by the user not being able to detect that the
+modifications are being performed. If they don't know that the site is supposed
+to be running over a secure connection then they won't know to check the links
+that they are clicking.&lt;/p&gt;
+&lt;p&gt;One way to inform the user that something is amiss is to make use of some of
+the newer CSS selectors. The following example will be concerned with forms
+that get submitted to HTTPS URLs - something that is normally seen on login
+pages.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nt"&gt;&amp;lt;form&lt;/span&gt; &lt;span class="na"&gt;method=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;POST&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;action=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;https://mysite/login.php&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;label&amp;gt;&lt;/span&gt;Username&lt;span class="nt"&gt;&amp;lt;/label&amp;gt;&amp;lt;input&lt;/span&gt; &lt;span class="na"&gt;type=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;text&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;name=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;username&amp;quot;&lt;/span&gt; &lt;span class="nt"&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;label&amp;gt;&lt;/span&gt;Password&lt;span class="nt"&gt;&amp;lt;/label&amp;gt;&amp;lt;input&lt;/span&gt; &lt;span class="na"&gt;type=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;password&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;name=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;password&amp;quot;&lt;/span&gt; &lt;span class="nt"&gt;/&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/form&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here we see that the site will submit the form to the URL
+'https://mysite/login.php'. If we have a look at the code for SSLStrip
+(&lt;a href="https://github.com/moxie0/sslstrip/blob/master/sslstrip/ServerConnection.py#L31"&gt;see here&lt;/a&gt;)
+then we see that that regular expression used to find secure links is fairly
+basic. Anything starting with "https" and then followed by some valid URL
+characters has the "https" replaced with "http"
+(&lt;a href="https://github.com/moxie0/sslstrip/blob/master/sslstrip/ServerConnection.py#L144]"&gt;as shown here&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;In our example this will result in our form looking like the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nt"&gt;&amp;lt;form&lt;/span&gt; &lt;span class="na"&gt;method=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;POST&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;action=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;http://mysite/login.php&amp;quot;&lt;/span&gt;&lt;span class="nt"&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;label&amp;gt;&lt;/span&gt;Username&lt;span class="nt"&gt;&amp;lt;/label&amp;gt;&amp;lt;input&lt;/span&gt; &lt;span class="na"&gt;type=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;text&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;name=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;username&amp;quot;&lt;/span&gt; &lt;span class="nt"&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class="nt"&gt;&amp;lt;label&amp;gt;&lt;/span&gt;Password&lt;span class="nt"&gt;&amp;lt;/label&amp;gt;&amp;lt;input&lt;/span&gt; &lt;span class="na"&gt;type=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;password&amp;quot;&lt;/span&gt; &lt;span class="na"&gt;name=&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;password&amp;quot;&lt;/span&gt; &lt;span class="nt"&gt;/&amp;gt;&lt;/span&gt;
+&lt;span class="nt"&gt;&amp;lt;/form&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And the user being none the wiser.&lt;/p&gt;
+&lt;p&gt;In order to detect this change with CSS we need to use attribute value
+selectors. The following CSS rule:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nt"&gt;form&lt;/span&gt;&lt;span class="nc"&gt;.secure&lt;/span&gt;&lt;span class="cp"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;action&lt;/span&gt;&lt;span class="p"&gt;^&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;http://&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;]&lt;/span&gt;&lt;span class="nd"&gt;:after&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;content&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="sx"&gt;url(&amp;quot;/images/nedry.gif&amp;quot;)&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Will change the following form:&lt;/p&gt;
+&lt;form class="secure" method="POST" action="https://#"&gt;
+    &lt;label for="username1"&gt;Username&lt;/label&gt;
+    &lt;input type="text" name="username1" id="username1" /&gt;&lt;br/&gt;
+    &lt;label for="password1"&gt;Password&lt;/label&gt;
+    &lt;input type="password" name="password1" id="password1" /&gt;
+&lt;/form&gt;
+
+&lt;p&gt;To look like the following:&lt;/p&gt;
+&lt;form class="secure" method="POST" action="http://#"&gt;
+    &lt;label for="username2"&gt;Username&lt;/label&gt;
+    &lt;input type="text" name="username2" id="username2" /&gt;&lt;br/&gt;
+    &lt;label for="password2"&gt;Password&lt;/label&gt;
+    &lt;input type="password" name="password2" id="password2" /&gt;&lt;br/&gt;
+&lt;/form&gt;
+
+&lt;p&gt;Not the most subtle of indicators, but should get the point across.&lt;/p&gt;
+&lt;p&gt;The selector &lt;code&gt;form.secure[action^="http://"]:after&lt;/code&gt; will match all forms that
+have the class of 'secure' and who's action begins with "http://". (The &lt;code&gt;:after&lt;/code&gt;
+is used to insert content after the form). Site owners would have to add the
+class on all forms that they wanted to be secure and include some appropriate
+styling and content to warn users that their traffic is being intercepted.&lt;/p&gt;
+&lt;p&gt;Obviously, this technique will only work when 'traditional' forms are being
+used. When JavaScript is being used for validation or other such trickery, and
+the form's action is changed as a result, then this method would not work as
+well. Including HTTPS links and overriding submission actions could still be
+used to make this technique valid, but that is left as an exercise to the
+reader.&lt;/p&gt;</summary></entry><entry><title>Detecting SSLStrip using CSS</title><link href="http://stupentest.net/detecting-sslstrip-using-css.html" rel="alternate"></link><updated>2013-06-27T00:00:00+02:00</updated><author><name>Felix Ingram</name></author><id>tag:stupentest.net,2013-06-27:detecting-sslstrip-using-css.html</id><summary type="html">&lt;hr /&gt;
 &lt;h1&gt;Detecting SSLStrip using CSS&lt;/h1&gt;
 &lt;p&gt;SSLStrip is a simple proxying tool that will change HTTPS links to vanilla
 HTTP. It's one of the reasons why pentest reports will recommend against
