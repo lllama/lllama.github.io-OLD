@@ -65,7 +65,7 @@ def cf_upload():
 #@hosts(production)
 def publish():
     local('pelican -s publishconf.py')
-    local('git add .')
+    local('git add --all .')
     local('git commit -m "Publishing on '+str(datetime.now())+'"')
     local('git checkout master')
     local('git read-tree -m -u source:output')
