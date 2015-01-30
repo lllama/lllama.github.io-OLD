@@ -47,12 +47,6 @@ selectors. The following CSS rule:&lt;/p&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;style type="text/css" scoped&gt;
-    form.secure[action^="http://"]:after {
-        content: url("/images/nedry.gif");
-    }
-&lt;/style&gt;
-
 &lt;p&gt;Will change the following form:&lt;/p&gt;
 &lt;form class="secure" method="POST" action="https://#"&gt;
     &lt;label for="username1"&gt;Username&lt;/label&gt;
@@ -63,6 +57,11 @@ selectors. The following CSS rule:&lt;/p&gt;
 
 &lt;p&gt;To look like the following:&lt;/p&gt;
 &lt;form class="secure" method="POST" action="http://#"&gt;
+    &lt;style type="text/css" scoped&gt;
+        form.secure[action^="http://"]:after {
+            content: url("/images/nedry.gif");
+        }
+    &lt;/style&gt;
     &lt;label for="username2"&gt;Username&lt;/label&gt;
     &lt;input type="text" name="username2" id="username2" /&gt;&lt;br/&gt;
     &lt;label for="password2"&gt;Password&lt;/label&gt;
