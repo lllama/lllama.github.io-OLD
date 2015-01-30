@@ -28,8 +28,8 @@
         
 
             <header>
-            <h1><a href="http://stupentest.net" id="site-title">  </a>  <a href="http://stupentest.net/test-detecting-sslstrip-using-css.html" id="page-title">TEST Detecting SSLStrip using CSS</a></h1>
-<time datetime="2013-07-27T00:00:00+02:00">Sat 27 July 2013</time>            </header>
+            <h1><a href="http://stupentest.net" id="site-title">  </a>  <a href="http://stupentest.net/detecting-sslstrip-using-css.html" id="page-title">Detecting SSLStrip using CSS</a></h1>
+<time datetime="2013-06-27T00:00:00+02:00">Thu 27 June 2013</time>            </header>
 
             <article>
                 <hr />
@@ -80,6 +80,12 @@ selectors. The following CSS rule:</p>
 </pre></div>
 
 
+<style>
+    form.secure[action^="http://"]:after {
+        content: url("/images/nedry.gif");
+    }
+</style>
+
 <p>Will change the following form:</p>
 <form class="secure" method="POST" action="https://#">
     <label for="username1">Username</label>
@@ -111,10 +117,6 @@ reader.</p>            </article>
                 <section id="article-list">
                     <h2>All posts</h2>
                     <ol>
-        
-
- 
-            <li><a href="http://stupentest.net/detecting-sslstrip-using-css.html" rel="bookmark" title="Permalink to Detecting SSLStrip using CSS">Detecting SSLStrip using CSS</a></li>
         
 
  
