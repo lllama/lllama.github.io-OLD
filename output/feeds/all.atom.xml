@@ -47,7 +47,7 @@ selectors. The following CSS rule:&lt;/p&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;style type="text/css"&gt;
+&lt;style type="text/css" scoped&gt;
     form.secure[action^="http://"]:after {
         content: url("/images/nedry.gif");
     }

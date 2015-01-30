@@ -57,7 +57,7 @@ selectors. The following CSS rule:
         content: url("/images/nedry.gif");
     }
 
-<style type="text/css">
+<style type="text/css" scoped>
     form.secure[action^="http://"]:after {
         content: url("/images/nedry.gif");
     }
