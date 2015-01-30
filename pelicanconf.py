@@ -15,7 +15,7 @@ TIMEZONE = 'Europe/Paris'
 
 DEFAULT_LANG = 'en'
 
-THEME = r'../pelican-themes/monospace'
+THEME = r'../pelican-themes/pelican-simplegrey'
 
 # Feed generation is usually not desired when developing
 FEED_ALL_ATOM = None
