@@ -83,10 +83,11 @@ To look like the following:
 Not the most subtle of indicators, but should get the point across.
 
 The selector `form.secure[action^="http://"]:after` will match all forms that
-have the class of 'secure' and who's action begins with "http://". (The `:after`
-is used to insert content after the form). Site owners would have to add the
-class on all forms that they wanted to be secure and include some appropriate
-styling and content to warn users that their traffic is being intercepted.
+have the class of 'secure' and whose action begins with "http://". (The
+`:after` is used to insert content after the form). Site owners would have to
+add the class on all forms that they wanted to be secure and include some
+appropriate styling and content to warn users that their traffic is being
+intercepted.
 
 Obviously, this technique will only work when 'traditional' forms are being
 used. When JavaScript is being used for validation or other such trickery, and
