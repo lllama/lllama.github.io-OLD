@@ -8,6 +8,9 @@ SITEURL = ''
 
 PATH = 'content'
 
+STATIC_PATHS = ['images', r'extra\CNAME']
+EXTRA_PATH_METADATA = {r'extra\CNAME': {'path':'CNAME'},}
+
 TIMEZONE = 'Europe/Paris'
 
 DEFAULT_LANG = 'en'
